@@ -1,16 +1,19 @@
 FROM debian:bullseye
 
-RUN apt update && apt upgrade -y && \
-    apt install -y mariadb-server && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    mariadb-server \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY conf/my.cnf /etc/mysql/my.cnf
+# Copy config
+COPY conf/myconfig.cnf /etc/mysql/mariadb.conf.d/
 
+# Copy scripts
 COPY tools/setup.sh /setup.sh
+COPY tools/init.sql /init.sql
 
 RUN chmod +x /setup.sh
 
 EXPOSE 3306
 
-CMD ["/setup.sh"]
+ENTRYPOINT ["/setup.sh"]
