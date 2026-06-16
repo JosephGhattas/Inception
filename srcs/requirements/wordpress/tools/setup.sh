@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+set +e
+/*set -e*/
 
 mkdir -p /var/www/html
 
@@ -17,7 +18,7 @@ then
 		--dbname=$MYSQL_DATABASE \
 		--dbuser=$MYSQL_USER \
 		--dbpass=$MYSQL_PASSWORD \
-		--dbhost=mariadb:3306
+		--dbhost=maria_db:3306
 
 	wp core install \
 		--allow-root \
