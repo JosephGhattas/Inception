@@ -1,4 +1,6 @@
-docker exec mariadb mysql -u root -p"root123" -e "SELECT User, Host FROM mysql.user;"
+ghattas@inception:~/Inception$ docker exec mariadb mysql -u root -p"root123" -e "SELECT User, Host FROM mysql.user;"
+User	Host
+mariadb.sys	localhost
+mysql	localhost
+root	localhost
 
-
-docker exec mysql.user 
