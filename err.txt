@@ -1,17 +1,37 @@
-~/Inception$ docker logs mariadb
-260616 08:16:16 mysqld_safe Logging to syslog.
-260616 08:16:16 mysqld_safe Starting mariadbd daemon with databases from /var/lib/mysql
+jghattas@inception:~/Inception$ docker logs mariadb
+[setup] Starting MariaDB...
+260617 06:16:10 mysqld_safe Logging to syslog.
+260617 06:16:10 mysqld_safe Starting mariadbd daemon with databases from /var/lib/mysql
 
 
-~/Inception$ docker logs wordpress
-/setup.sh: line 4: /*set: No such file or directory
+
+jghattas@inception:~/Inception$ docker logs wordpress
 Installing WordPress...
 Error: WordPress files seem to already be present here.
-PHP Warning:  mysqli_real_connect(): php_network_getaddresses: getaddrinfo failed: Temporary failure in name resolution in phar:///usr/local/bin/wp/vendor/wp-cli/config-command/src/Config_Command.php on line 234
-Error: Database connection error (2002) php_network_getaddresses: getaddrinfo failed: Temporary failure in name resolution
-Error: 'wp-config.php' not found.
-Either create one manually or use `wp config create`.
-Error: 'wp-config.php' not found.
-Either create one manually or use `wp config create`.
-jghattas@inception:~/Inception$ 
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+Installing WordPress...
+Error: WordPress files seem to already be present here.
+
+jghattas@inception:~/Inception$ docker ps -a
+CONTAINER ID   IMAGE            COMMAND                  CREATED         STATUS                          PORTS                                   NAMES
+da90abf963f9   srcs-nginx       "nginx -g 'daemon of…"   3 minutes ago   Up 3 minutes                    0.0.0.0:443->443/tcp, :::443->443/tcp   nginx
+d5a327801bb7   srcs-wordpress   "/setup.sh"              3 minutes ago   Restarting (1) 34 seconds ago                                           wordpress
+1e3ecdee90cc   srcs-mariadb     "/setup.sh"              3 minutes ago   Up 3 minutes                    3306/tcp                                mariadb
 
