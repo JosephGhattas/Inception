@@ -10,7 +10,7 @@ COPY conf/myconfig.cnf /etc/mysql/mariadb.conf.d/
 
 # Copy scripts
 COPY tools/setup.sh /setup.sh
-COPY tools/init.sql /init.sql
+
 
 RUN chmod +x /setup.sh
 
