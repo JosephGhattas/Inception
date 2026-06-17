@@ -6,7 +6,7 @@ services:
     container_name: mariadb
     restart: always
     env_file:
-      - env.env
+      - .env
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -19,7 +19,7 @@ services:
     depends_on:
       - mariadb
     env_file:
-      - env.env
+      - .env
     volumes:
       - wordpress_data:/var/www/html
     networks:
