@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Create log directory that myconfig.cnf references
-RUN mkdir -p /var/log/mysql && chown mysql:mysql /var/log/mysql
+# Create the log directory that myconfig.cnf references
+RUN mkdir -p /var/log/mysql && chown -R mysql:mysql /var/log/mysql
 
 COPY conf/myconfig.cnf /etc/mysql/mariadb.conf.d/
 COPY tools/setup.sh /setup.sh
