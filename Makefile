@@ -26,7 +26,8 @@ clean:
 
 fclean: clean
 	@docker system prune -af
-	@sudo rm -rf $(WP_DIR)/* $(DB_DIR)/*
+	@sudo rm -rf $(DB_DIR)
+	@sudo rm -rf $(WP_DIR)
 
 re: fclean up
 
