@@ -35,6 +35,9 @@ EOF
 
     echo "[setup] Database and users created."
 
+	echo "[setup] Verifying users created:"
+	mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT User, Host FROM mysql.user;"
+
     # Shut down the temporary server using the root password we just set
     mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" shutdown
     wait $MYSQL_PID
@@ -42,4 +45,4 @@ EOF
 fi
 
 echo "[setup] Starting MariaDB..."
-exec mysqld_safe --datadir=/var/lib/mysql
+exec mysqld_safe --datadir=/var/lib/mysql	

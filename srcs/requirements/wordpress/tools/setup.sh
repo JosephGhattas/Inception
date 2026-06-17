@@ -7,7 +7,8 @@ cd /var/www/html
 # Wait for MariaDB to actually be ready to accept connections
 # (depends_on only waits for the container, not the service inside)
 echo "Waiting for MariaDB..."
-until mysqladmin ping -h mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --silent 2>/dev/null; do
+until mysql -h mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "SELECT 1;" > /dev/null 2>&1; do
+
     echo "MariaDB not ready yet, retrying in 2s..."
     sleep 2
 done
