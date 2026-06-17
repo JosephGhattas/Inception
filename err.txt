@@ -1,6 +1,16 @@
-ghattas@inception:~/Inception$ docker exec mariadb mysql -u root -p"root123" -e "SELECT User, Host FROM mysql.user;"
-User	Host
-mariadb.sys	localhost
-mysql	localhost
-root	localhost
+# 1. Stop everything
+make fclean
 
+# 2. Force delete as root — full directory, not glob
+sudo rm -rf /home/jghattas/data/mariadb
+sudo rm -rf /home/jghattas/data/wordpress
+
+# 3. Confirm truly gone — both must say "No such file or directory"
+sudo ls /home/jghattas/data/mariadb 2>&1
+sudo ls /home/jghattas/data/wordpress 2>&1
+
+# 4. Rebuild
+make
+
+# 5. Watch mariadb init live — wait 30 seconds
+docker logs -f mariadb
