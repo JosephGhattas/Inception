@@ -56,7 +56,7 @@ fi
 
 # Shutdown temporary server
 ${ADMIN} shutdown 2>/dev/null || true
-wait $MYSQL_PID
+wait $MYSQL_PID || true
 echo "[mariadb] Temporary server stopped."
 
 echo "[mariadb] Starting MariaDB in foreground..."
