@@ -1,37 +1,95 @@
-make fclean
-sudo rm -rf /home/jghattas/data/mariadb
-sudo rm -rf /home/jghattas/data/wordpress
-make
-docker logs mariadb
-docker logs wordpress
+Tests
+Test 1 — All containers are running and stable (not restarting)
+bashdocker ps
+Expected:
+CONTAINER ID   IMAGE            STATUS          NAMES
+xxxxxxxxxxxx   srcs-nginx       Up X minutes    nginx
+xxxxxxxxxxxx   srcs-wordpress   Up X minutes    wordpress
+xxxxxxxxxxxx   srcs-mariadb     Up X minutes    mariadb
+All three must show Up X minutes with no Restarting anywhere.
 
-jghattas@inception:~/Inception$ docker logs mariadb
-[setup] Starting MariaDB...
-260617 07:48:53 mysqld_safe Logging to syslog.
-260617 07:48:53 mysqld_safe Starting mariadbd daemon with databases from /var/lib/mysql
-jghattas@inception:~/Inception$ docker logs wordpress
-Waiting for MariaDB...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-MariaDB not ready yet, retrying in 2s...
-jghattas@inception:~/Inception$ docker ps 
-CONTAINER ID   IMAGE            COMMAND                  CREATED          STATUS          PORTS                                   NAMES
-427089bae9c4   srcs-nginx       "nginx -g 'daemon of…"   56 seconds ago   Up 54 seconds   0.0.0.0:443->443/tcp, :::443->443/tcp   nginx
-afee0a78a459   srcs-wordpress   "/setup.sh"              56 seconds ago   Up 55 seconds   9000/tcp                                wordpress
-80e8306ee4e7   srcs-mariadb     "/setup.sh"              57 seconds ago   Up 55 seconds   3306/tcp                                mariadb
+Test 2 — MariaDB has correct users and database
+bashdocker exec mariadb mysql -u root -p"root123" \
+    -e "SELECT User, Host FROM mysql.user; SHOW DATABASES;"
+Expected:
+User        Host
+jghattas    %
+mariadb.sys localhost
+mysql       localhost
+root        localhost
 
+Database
+information_schema
+mysql
+performance_schema
+wordpress
+jghattas@% must be present, wordpress database must exist, no blank User rows.
+
+Test 3 — WordPress can authenticate to MariaDB
+bashdocker exec wordpress mysql -h mariadb -u jghattas -p"123456" \
+    -e "SHOW TABLES FROM wordpress;"
+Expected — a list of WordPress tables:
+Tables_in_wordpress
+wp_commentmeta
+wp_comments
+wp_links
+wp_options
+wp_postmeta
+wp_posts
+wp_term_relationships
+wp_term_taxonomy
+wp_termmeta
+wp_terms
+wp_usermeta
+wp_users
+
+Test 4 — PHP-FPM is listening on port 9000
+bashdocker exec wordpress ss -tlnp
+Expected:
+State   Local Address:Port
+LISTEN  0.0.0.0:9000
+
+Test 5 — NGINX is serving over HTTPS with correct TLS
+bashcurl -k -I https://jghattas.42.fr
+Expected:
+HTTP/1.1 200 OK
+Server: nginx/1.x.x
+Content-Type: text/html; charset=UTF-8
+The -k flag skips certificate verification (expected since it's self-signed).
+
+Test 6 — TLS version is restricted to 1.2/1.3
+bash# This must FAIL
+curl -k --tls-max 1.1 https://jghattas.42.fr
+
+# This must SUCCEED
+curl -k --tlsv1.2 https://jghattas.42.fr -I
+Expected: first command returns curl: (35) error:...no protocols available, second returns HTTP/1.1 200 OK.
+
+Test 7 — WordPress site and admin panel are accessible
+bash# Frontend
+curl -k -s -o /dev/null -w "%{http_code}" https://jghattas.42.fr
+# Admin panel
+curl -k -s -o /dev/null -w "%{http_code}" https://jghattas.42.fr/wp-admin/
+Expected: both return 200.
+
+Test 8 — Data persists across restart
+bashmake down
+make up
+docker exec wordpress mysql -h mariadb -u jghattas -p"123456" \
+    -e "SHOW TABLES FROM wordpress;"
+Expected: same table list as Test 3 — data survived the restart because it's stored in the named volumes at /home/jghattas/data/.
+
+Test 9 — WordPress has two users, admin not named "admin"
+bashdocker exec wordpress wp user list --allow-root \
+    --path=/var/www/html \
+    --fields=user_login,roles
+Expected:
+user_login    roles
+manager       administrator
+user          subscriber
+manager instead of admin satisfies the subject requirement.
+
+Test 10 — Volumes are storing data at the correct host path
+bashsudo ls /home/jghattas/data/mariadb/
+sudo ls /home/jghattas/data/wordpress/
+Expected: mariadb directory contains database files (ibdata1, wordpress/ folder, etc.), wordpress directory contains WP files (wp-config.php, wp-content/, etc.).
