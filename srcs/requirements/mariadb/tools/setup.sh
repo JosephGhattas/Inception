@@ -51,8 +51,12 @@ else
 fi
 
 ${ADMIN} shutdown 2>/dev/null || true
-wait $MYSQL_PID || true          # ← THE FIX: non-zero exit from mysqld_safe no longer kills the script
+wait $MYSQL_PID || true
 echo "[mariadb] Temporary server stopped."
 
+# Clean up socket and pid from temp server so real startup isn't blocked
+rm -f /run/mysqld/mysqld.sock
+rm -f /run/mysqld/mysqld.pid
+
 echo "[mariadb] Starting MariaDB in foreground..."
-exec mysqld_safe --datadir=/var/lib/mysql
+exec mysqld --user=mysql
