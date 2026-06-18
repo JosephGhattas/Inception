@@ -16,26 +16,19 @@ mysqld_safe --skip-networking &
 MYSQL_PID=$!
 
 echo "[mariadb] Waiting for server..."
-until mysql -u root -e "SELECT 1;" > /dev/null 2>&1 || \
-      mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1;" > /dev/null 2>&1; do
+until mysql -u root --socket=/run/mysqld/mysqld.sock -e "SELECT 1;" > /dev/null 2>&1; do
     sleep 1
 done
 echo "[mariadb] Server ready."
 
-if mysql -u root -e "SELECT 1;" > /dev/null 2>&1; then
-    ROOT="mysql -u root"
-    ADMIN="mysqladmin -u root"
-else
-    ROOT="mysql -u root -p${MYSQL_ROOT_PASSWORD}"
-    ADMIN="mysqladmin -u root -p${MYSQL_ROOT_PASSWORD}"
-fi
-
-USER_EXISTS=$(${ROOT} -e "SELECT COUNT(*) FROM mysql.user WHERE User='${MYSQL_USER}' AND Host='%';" 2>/dev/null | tail -1)
+USER_EXISTS=$(mysql -u root --socket=/run/mysqld/mysqld.sock \
+    -e "SELECT COUNT(*) FROM mysql.user WHERE User='${MYSQL_USER}' AND Host='%';" \
+    2>/dev/null | tail -1)
 echo "[mariadb] User '${MYSQL_USER}' exists: ${USER_EXISTS}"
 
 if [ "${USER_EXISTS}" = "0" ]; then
     echo "[mariadb] Creating database and user..."
-    ${ROOT} <<EOF
+    mysql -u root --socket=/run/mysqld/mysqld.sock <<EOF
 DELETE FROM mysql.user WHERE User='';
 CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
 CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
@@ -45,18 +38,24 @@ ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 FLUSH PRIVILEGES;
 EOF
     echo "[mariadb] Done. Verifying:"
-    mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT User, Host FROM mysql.user;"
+    mysql -u root --socket=/run/mysqld/mysqld.sock \
+        -p"${MYSQL_ROOT_PASSWORD}" \
+        -e "SELECT User, Host FROM mysql.user;"
 else
     echo "[mariadb] User already exists, skipping setup."
 fi
 
-${ADMIN} shutdown 2>/dev/null || true
+# Shutdown using socket — kill as fallback
+echo "[mariadb] Shutting down temporary server..."
+mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    --socket=/run/mysqld/mysqld.sock shutdown 2>/dev/null \
+    || kill $MYSQL_PID 2>/dev/null || true
 wait $MYSQL_PID || true
-echo "[mariadb] Temporary server stopped."
 
-# Clean up socket and pid from temp server so real startup isn't blocked
+# Clean up socket and pid so real startup isn't blocked
 rm -f /run/mysqld/mysqld.sock
 rm -f /run/mysqld/mysqld.pid
+echo "[mariadb] Temporary server stopped."
 
 echo "[mariadb] Starting MariaDB in foreground..."
 exec mysqld --user=mysql
