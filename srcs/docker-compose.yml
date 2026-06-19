@@ -1,5 +1,14 @@
 version: '3.8'
 
+secrets:
+  db_password:
+    file: ../secrets/db_password.txt
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  credentials:
+    file: ../secrets/credentials.txt
+
+
 services:
   mariadb:
     build: ./requirements/mariadb
@@ -7,6 +16,9 @@ services:
     restart: always
     env_file:
       - .env
+    secrets:
+      - db_password
+      - db_root_password
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -20,6 +32,9 @@ services:
       - mariadb
     env_file:
       - .env
+    secrets:
+      - db_password
+      - credentials
     volumes:
       - wordpress_data:/var/www/html
     networks:

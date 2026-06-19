@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+MYSQL_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
+
 mkdir -p /run/mysqld
 chown -R mysql:mysql /run/mysqld
 chown -R mysql:mysql /var/lib/mysql
@@ -24,7 +27,6 @@ echo "[mariadb] Server ready."
 USER_EXISTS=$(mysql -u root --socket=/run/mysqld/mysqld.sock \
     -e "SELECT COUNT(*) FROM mysql.user WHERE User='${MYSQL_USER}' AND Host='%';" \
     2>/dev/null | tail -1)
-echo "[mariadb] User '${MYSQL_USER}' exists: ${USER_EXISTS}"
 
 if [ "${USER_EXISTS}" = "0" ]; then
     echo "[mariadb] Creating database and user..."
@@ -37,22 +39,16 @@ FLUSH PRIVILEGES;
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 FLUSH PRIVILEGES;
 EOF
-    echo "[mariadb] Done. Verifying:"
-    mysql -u root --socket=/run/mysqld/mysqld.sock \
-        -p"${MYSQL_ROOT_PASSWORD}" \
-        -e "SELECT User, Host FROM mysql.user;"
+    echo "[mariadb] Done."
 else
     echo "[mariadb] User already exists, skipping setup."
 fi
 
-# Shutdown using socket — kill as fallback
-echo "[mariadb] Shutting down temporary server..."
 mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" \
     --socket=/run/mysqld/mysqld.sock shutdown 2>/dev/null \
     || kill $MYSQL_PID 2>/dev/null || true
 wait $MYSQL_PID || true
 
-# Clean up socket and pid so real startup isn't blocked
 rm -f /run/mysqld/mysqld.sock
 rm -f /run/mysqld/mysqld.pid
 echo "[mariadb] Temporary server stopped."

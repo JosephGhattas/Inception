@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+WP_ADMIN_PASSWORD=$(cat /run/secrets/credentials | head -1)
+WP_USER_PASSWORD=$(cat /run/secrets/credentials | tail -1)
+
 mkdir -p /var/www/html
 cd /var/www/html
 
-# Wait for MariaDB to actually be ready to accept connections
-# (depends_on only waits for the container, not the service inside)
 echo "Waiting for MariaDB..."
 until mysql -h mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "SELECT 1;" > /dev/null 2>&1; do
-
     echo "MariaDB not ready yet, retrying in 2s..."
     sleep 2
 done
@@ -17,8 +18,6 @@ echo "MariaDB is ready."
 if [ ! -f wp-config.php ]; then
     echo "Installing WordPress..."
 
-    # Check for core files separately from config —
-    # on a crash/restart, files may exist but config may not
     if [ ! -f wp-login.php ]; then
         wp core download --allow-root
     else
