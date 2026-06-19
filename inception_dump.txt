@@ -1,0 +1,467 @@
+==================================================
+FILE: ./Makefile
+==================================================
+NAME        = inception
+COMPOSE     = docker compose -f srcs/docker-compose.yml
+
+DATA_DIR    = /home/jghattas/data
+WP_DIR      = $(DATA_DIR)/wordpress
+DB_DIR      = $(DATA_DIR)/mariadb
+
+
+all: up
+
+setup:
+	@mkdir -p $(WP_DIR)
+	@mkdir -p $(DB_DIR)
+	@chmod 755 $(DATA_DIR)
+	@chmod 755 $(WP_DIR)
+	@chmod 755 $(DB_DIR)
+
+up: setup
+	@$(COMPOSE) up --build -d
+
+down:
+	@$(COMPOSE) down
+
+clean:
+	@$(COMPOSE) down -v
+
+fclean: clean
+	@docker system prune -af
+	@sudo rm -rf $(DB_DIR)
+	@sudo rm -rf $(WP_DIR)
+
+re: fclean up
+
+ps:
+	@docker ps
+
+.PHONY: all up down clean fclean re ps setup
+
+
+==================================================
+FILE: ./secrets/credentials.txt
+==================================================
+manager123
+user123
+
+
+==================================================
+FILE: ./secrets/db_password.txt
+==================================================
+123456
+
+
+==================================================
+FILE: ./secrets/db_root_password.txt
+==================================================
+root123
+
+
+==================================================
+FILE: ./srcs/docker-compose.yml
+==================================================
+version: '3.8'
+
+secrets:
+  db_password:
+    file: ../secrets/db_password.txt
+  db_root_password:
+    file: ../secrets/db_root_password.txt
+  credentials:
+    file: ../secrets/credentials.txt
+
+
+services:
+  mariadb:
+    build: ./requirements/mariadb
+    container_name: mariadb
+    restart: always
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - db_root_password
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - inception
+
+  wordpress:
+    build: ./requirements/wordpress
+    container_name: wordpress
+    restart: always
+    depends_on:
+      - mariadb
+    env_file:
+      - .env
+    secrets:
+      - db_password
+      - credentials
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+
+  nginx:
+    build: ./requirements/nginx
+    container_name: nginx
+    restart: always
+    depends_on:
+      - wordpress
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+
+volumes:
+  mariadb_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/jghattas/data/mariadb
+
+  wordpress_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/jghattas/data/wordpress
+
+networks:
+  inception:
+    driver: bridge	
+
+
+==================================================
+FILE: ./srcs/.env
+==================================================
+# MariaDB
+MYSQL_DATABASE=wordpress
+MYSQL_USER=jghattas
+
+
+# WordPress
+
+WP_TITLE=Inception
+
+WP_ADMIN_USER=manager
+WP_ADMIN_EMAIL=manager@jghattas.42.fr
+
+WP_USER=user
+WP_USER_EMAIL=user@jghattas.42.fr
+
+DOMAIN_NAME=jghattas.42.fr
+
+
+
+
+==================================================
+FILE: ./srcs/requirements/mariadb/conf/myconfig.cnf
+==================================================
+# MariaDB server configuration for Inception
+
+[server]
+[mysqld]
+
+# --------------------
+# BASIC SETTINGS
+# --------------------
+user                    = mysql
+pid-file                = /run/mysqld/mysqld.pid
+socket                  = /run/mysqld/mysqld.sock
+port                    = 3306
+basedir                 = /usr
+datadir                 = /var/lib/mysql
+tmpdir                  = /tmp
+
+# --------------------
+# NETWORK (IMPORTANT)
+# --------------------
+bind-address            = 0.0.0.0
+
+# --------------------
+# CHARACTER SET (WordPress requirement)
+# --------------------
+character-set-server    = utf8mb4
+collation-server        = utf8mb4_general_ci
+
+# --------------------
+# SAFETY / STABILITY
+# --------------------
+skip-external-locking
+
+# --------------------
+# LOGGING (optional but useful)
+# --------------------
+log_error = /var/log/mysql/error.log
+
+# --------------------
+# INNODB (keep default behavior)
+# --------------------
+default_storage_engine = InnoDB
+
+# --------------------
+# CONNECTION LIMIT (optional)
+# --------------------
+max_connections = 100
+
+# --------------------
+# SOCKET CLIENT GROUPS
+# --------------------
+[embedded]
+[mariadb]
+
+
+==================================================
+FILE: ./srcs/requirements/mariadb/Dockerfile
+==================================================
+FROM debian:bullseye
+
+RUN apt-get update && apt-get install -y \
+    mariadb-server \
+    bash \
+    && rm -rf /var/lib/apt/lists/*
+
+# Remove data initialized by apt postinstall script
+# so our setup.sh init block always runs on first real boot
+RUN rm -rf /var/lib/mysql/*
+
+RUN mkdir -p /var/log/mysql && chown -R mysql:mysql /var/log/mysql
+
+COPY conf/myconfig.cnf /etc/mysql/mariadb.conf.d/
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+EXPOSE 3306
+ENTRYPOINT ["/setup.sh"]
+
+
+==================================================
+FILE: ./srcs/requirements/mariadb/tools/setup.sh
+==================================================
+#!/bin/bash
+set -e
+
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+MYSQL_ROOT_PASSWORD=$(cat /run/secrets/db_root_password)
+
+mkdir -p /run/mysqld
+chown -R mysql:mysql /run/mysqld
+chown -R mysql:mysql /var/lib/mysql
+
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    echo "[mariadb] Initializing system tables..."
+    mysql_install_db --user=mysql --datadir=/var/lib/mysql > /dev/null
+    echo "[mariadb] System tables done."
+fi
+
+echo "[mariadb] Starting temporary server..."
+mysqld_safe --skip-networking &
+MYSQL_PID=$!
+
+echo "[mariadb] Waiting for server..."
+until mysql -u root --socket=/run/mysqld/mysqld.sock -e "SELECT 1;" > /dev/null 2>&1; do
+    sleep 1
+done
+echo "[mariadb] Server ready."
+
+USER_EXISTS=$(mysql -u root --socket=/run/mysqld/mysqld.sock \
+    -e "SELECT COUNT(*) FROM mysql.user WHERE User='${MYSQL_USER}' AND Host='%';" \
+    2>/dev/null | tail -1)
+
+if [ "${USER_EXISTS}" = "0" ]; then
+    echo "[mariadb] Creating database and user..."
+    mysql -u root --socket=/run/mysqld/mysqld.sock <<EOF
+DELETE FROM mysql.user WHERE User='';
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_DATABASE}\`;
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO '${MYSQL_USER}'@'%';
+FLUSH PRIVILEGES;
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+FLUSH PRIVILEGES;
+EOF
+    echo "[mariadb] Done."
+else
+    echo "[mariadb] User already exists, skipping setup."
+fi
+
+mysqladmin -u root -p"${MYSQL_ROOT_PASSWORD}" \
+    --socket=/run/mysqld/mysqld.sock shutdown 2>/dev/null \
+    || kill $MYSQL_PID 2>/dev/null || true
+wait $MYSQL_PID || true
+
+rm -f /run/mysqld/mysqld.sock
+rm -f /run/mysqld/mysqld.pid
+echo "[mariadb] Temporary server stopped."
+
+echo "[mariadb] Starting MariaDB in foreground..."
+exec mysqld --user=mysql
+
+==================================================
+FILE: ./srcs/requirements/nginx/conf/nginx.conf
+==================================================
+server
+{
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name jghattas.42.fr;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_certificate     /etc/nginx/ssl/inception.crt;
+    ssl_certificate_key /etc/nginx/ssl/inception.key;
+
+    root  /var/www/html;
+    index index.php index.html;
+
+    location /
+    {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$
+    {
+        include fastcgi_params;
+        fastcgi_pass            wordpress:9000;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO       $fastcgi_path_info;
+    }
+}
+
+
+==================================================
+FILE: ./srcs/requirements/nginx/Dockerfile
+==================================================
+FROM debian:bullseye
+
+RUN apt-get update && apt-get install -y \
+    nginx \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /etc/nginx/ssl
+
+RUN openssl req -x509 -nodes -days 365 \
+    -newkey rsa:2048 \
+    -keyout /etc/nginx/ssl/inception.key \
+    -out /etc/nginx/ssl/inception.crt \
+    -subj "/C=LB/ST=Beirut/L=Beirut/O=42/OU=42/CN=jghattas.42.fr"
+
+COPY conf/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 443
+
+CMD ["nginx", "-g", "daemon off;"]
+
+
+==================================================
+FILE: ./srcs/requirements/wordpress/conf/www.conf
+==================================================
+[www]
+
+user = www-data
+group = www-data
+
+listen = 9000
+
+listen.owner = www-data
+listen.group = www-data
+
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+
+clear_env = no
+
+
+==================================================
+FILE: ./srcs/requirements/wordpress/Dockerfile
+==================================================
+FROM debian:bullseye
+
+RUN apt-get update && apt-get install -y \
+    php-fpm \
+    php-mysql \
+    mariadb-client \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /run/php
+
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
+
+COPY conf/www.conf /etc/php/7.4/fpm/pool.d/www.conf
+
+COPY tools/setup.sh /setup.sh
+RUN chmod +x /setup.sh
+
+EXPOSE 9000
+
+ENTRYPOINT ["/setup.sh"]
+
+
+==================================================
+FILE: ./srcs/requirements/wordpress/tools/setup.sh
+==================================================
+#!/bin/bash
+set -e
+
+MYSQL_PASSWORD=$(cat /run/secrets/db_password)
+WP_ADMIN_PASSWORD=$(cat /run/secrets/credentials | head -1)
+WP_USER_PASSWORD=$(cat /run/secrets/credentials | tail -1)
+
+mkdir -p /var/www/html
+cd /var/www/html
+
+echo "Waiting for MariaDB..."
+until mysql -h mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "SELECT 1;" > /dev/null 2>&1; do
+    echo "MariaDB not ready yet, retrying in 2s..."
+    sleep 2
+done
+echo "MariaDB is ready."
+
+if [ ! -f wp-config.php ]; then
+    echo "Installing WordPress..."
+
+    if [ ! -f wp-login.php ]; then
+        wp core download --allow-root
+    else
+        echo "Core files already present, skipping download."
+    fi
+
+    wp config create \
+        --allow-root \
+        --dbname="$MYSQL_DATABASE" \
+        --dbuser="$MYSQL_USER" \
+        --dbpass="$MYSQL_PASSWORD" \
+        --dbhost=mariadb:3306
+
+    wp core install \
+        --allow-root \
+        --url="$DOMAIN_NAME" \
+        --title="$WP_TITLE" \
+        --admin_user="$WP_ADMIN_USER" \
+        --admin_password="$WP_ADMIN_PASSWORD" \
+        --admin_email="$WP_ADMIN_EMAIL"
+
+    wp user create \
+        "$WP_USER" \
+        "$WP_USER_EMAIL" \
+        --user_pass="$WP_USER_PASSWORD" \
+        --allow-root
+
+    echo "WordPress installed successfully."
+else
+    echo "WordPress already configured, skipping install."
+fi
+
+mkdir -p /run/php
+exec /usr/sbin/php-fpm7.4 -F
+

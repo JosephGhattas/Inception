@@ -11,6 +11,7 @@ secrets:
 
 services:
   mariadb:
+    image: mariadb
     build: ./requirements/mariadb
     container_name: mariadb
     restart: always
@@ -25,6 +26,7 @@ services:
       - inception
 
   wordpress:
+    image: wordpress
     build: ./requirements/wordpress
     container_name: wordpress
     restart: always
@@ -41,6 +43,7 @@ services:
       - inception
 
   nginx:
+    image: nginx
     build: ./requirements/nginx
     container_name: nginx
     restart: always
