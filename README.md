@@ -89,7 +89,7 @@ make
 - [PHP-FPM configuration](https://www.php.net/manual/en/install.fpm.configuration.php)
 - [Docker secrets](https://docs.docker.com/engine/swarm/secrets/)
 - [PID 1 best practices in Docker](https://cloud.google.com/architecture/best-practices-for-building-containers#signal-handling)
-- [OpenSSL self-signed certificates](https://www.openssl.org/docs/manmaster/man1/openssl-req.html)
+
 
 ### AI Usage
 
