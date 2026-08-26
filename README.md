@@ -12,7 +12,7 @@ The infrastructure is accessed exclusively through NGINX on port 443 using TLS, 
 
 ### How Docker is used
 
-Each service runs in its own container built from a custom Dockerfile based on `debian:bullseye`. No pre-built images are pulled from DockerHub (except the base Debian image). Docker Compose orchestrates the three containers, their volumes, their network, and their environment.
+Each service runs in its own container built from a custom Dockerfile based on `debian:bookworm`. No pre-built images are pulled from DockerHub (except the base Debian image). Docker Compose orchestrates the three containers, their volumes, their network, and their environment.
 
 ### Design Choices
 
