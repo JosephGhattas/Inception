@@ -143,7 +143,7 @@ On first boot, MariaDB initializes the database and creates the `jghattas` user,
 **WordPress** (`setup.sh`):
 1. Waits for MariaDB to accept connections (retry loop)
 2. If `wp-config.php` doesn't exist: downloads WordPress core, creates config, installs WordPress, creates the second user
-3. Starts `php-fpm7.4` in foreground as PID 1
+3. Starts `php-fpm8.2` in foreground as PID 1
 
 **NGINX** (Dockerfile `CMD`):
 1. SSL certificate and key are generated at image build time with OpenSSL
@@ -795,7 +795,7 @@ else
 fi
 
 mkdir -p /run/php
-exec /usr/sbin/php-fpm7.4 -F
+exec /usr/sbin/php-fpm8.2 -F
 
 ========================================
 FILE: ./USER_DOC.md
