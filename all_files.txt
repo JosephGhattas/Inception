@@ -281,7 +281,7 @@ The infrastructure is accessed exclusively through NGINX on port 443 using TLS, 
 
 ### How Docker is used
 
-Each service runs in its own container built from a custom Dockerfile based on `debian:bullseye`. No pre-built images are pulled from DockerHub (except the base Debian image). Docker Compose orchestrates the three containers, their volumes, their network, and their environment.
+Each service runs in its own container built from a custom Dockerfile based on `debian:bookworm`. No pre-built images are pulled from DockerHub (except the base Debian image). Docker Compose orchestrates the three containers, their volumes, their network, and their environment.
 
 ### Design Choices
 
@@ -397,7 +397,6 @@ DOMAIN_NAME=jghattas.42.fr
 ========================================
 FILE: ./srcs/docker-compose.yml
 ========================================
-version: '3.8'
 
 secrets:
   db_password:
@@ -539,7 +538,7 @@ max_connections = 100
 ========================================
 FILE: ./srcs/requirements/mariadb/Dockerfile
 ========================================
-FROM debian:bullseye
+FROM debian:bookworm
 
 RUN apt-get update && apt-get install -y \
     mariadb-server \
@@ -661,7 +660,7 @@ server
 ========================================
 FILE: ./srcs/requirements/nginx/Dockerfile
 ========================================
-FROM debian:bullseye
+FROM debian:bookworm
 
 RUN apt-get update && apt-get install -y \
     nginx \
@@ -714,7 +713,7 @@ clear_env = no
 ========================================
 FILE: ./srcs/requirements/wordpress/Dockerfile
 ========================================
-FROM debian:bullseye
+FROM debian:bookworm
 
 RUN apt-get update && apt-get install -y \
     php-fpm \
