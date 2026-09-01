@@ -1,4 +1,3 @@
-```dockerfile
 FROM debian:bookworm
 
 RUN sed -i 's|http://deb.debian.org/debian|http://ftp.fr.debian.org/debian|g' /etc/apt/sources.list.d/debian.sources && \
