@@ -24,4 +24,3 @@ RUN chmod +x /setup.sh
 EXPOSE 9000
 
 ENTRYPOINT ["/setup.sh"]
-```
