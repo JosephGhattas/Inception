@@ -1,6 +1,8 @@
 FROM debian:bookworm
 
-RUN apt-get update && apt-get install -y \
+RUN sed -i 's|http://deb.debian.org/debian|http://ftp.fr.debian.org/debian|g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's|http://deb.debian.org/debian-security|http://ftp.fr.debian.org/debian-security|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y \
     nginx \
     openssl \
     && rm -rf /var/lib/apt/lists/*
