@@ -1,1 +1,3 @@
-jghattas@c1r3s7 ~ % ssh -A -p 2222 jghattas@127.0.0.1
+jghattas@c1r3s7 ~ % ssh -A -p 2222 jghattas@127.0.0.1 (no desktop env)
+jghattas@c1r3s7 ~ % ssh -A -p 2223 jghattas@127.0.0.1 (clone with Desktop env)
+
