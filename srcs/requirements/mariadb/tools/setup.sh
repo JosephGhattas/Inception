@@ -19,7 +19,7 @@ mysqld_safe --skip-networking &
 MYSQL_PID=$!
 
 echo "[mariadb] Waiting for server..."
-until mysql -u root --socket=/run/mysqld/mysqld.sock -e "SELECT 1;" > /dev/null 2>&1; do
+until mysql -u root -p"${MYSQL_ROOT_PASSWORD}" --socket=/run/mysqld/mysqld.sock -e "SELECT 1;" > /dev/null 2>&1; do
     sleep 1
 done
 echo "[mariadb] Server ready."
