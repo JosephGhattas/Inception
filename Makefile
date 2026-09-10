@@ -12,8 +12,8 @@ setup:
 	@mkdir -p $(WP_DIR)
 	@mkdir -p $(DB_DIR)
 	@chmod 755 $(DATA_DIR)
-	@chmod 755 $(WP_DIR)
-	@chmod 755 $(DB_DIR)
+	-@chmod 755 $(WP_DIR)
+	-@chmod 755 $(DB_DIR)
 
 up: setup
 	@$(COMPOSE) up --build -d
