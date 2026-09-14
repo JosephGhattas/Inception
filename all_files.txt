@@ -1,3 +1,8 @@
 jghattas@c1r3s7 ~ % ssh -A -p 2222 jghattas@127.0.0.1 (no desktop env)
 jghattas@c1r3s7 ~ % ssh -A -p 2223 jghattas@127.0.0.1 (clone with Desktop env)
 
+
+
+
+docker compose -f srcs/docker-compose.yml exec mariadb mysql -u root -p -e "SHOW DATABASES; SELECT User, Host FROM mysql.user;"
+curl -k -I https://jghattas.42.fr
